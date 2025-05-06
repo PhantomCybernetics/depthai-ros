@@ -20,6 +20,7 @@ def is_launch_config_true(context, name):
 
 def setup_launch_prefix(context, *args, **kwargs):
     use_gdb = LaunchConfiguration("use_gdb", default="false")
+    use_gdb_server = LaunchConfiguration("use_gdb_server", default="false")
     use_valgrind = LaunchConfiguration("use_valgrind", default="false")
     use_perf = LaunchConfiguration("use_perf", default="false")
 
@@ -27,6 +28,8 @@ def setup_launch_prefix(context, *args, **kwargs):
 
     if use_gdb.perform(context) == "true":
         launch_prefix += "xterm -e gdb -ex run --args"
+    if use_gdb_server.perform(context) == "true":
+        launch_prefix += "gdbserver localhost:3000"
     if use_valgrind.perform(context) == "true":
         launch_prefix += "valgrind --tool=callgrind"
     if use_perf.perform(context) == "true":
