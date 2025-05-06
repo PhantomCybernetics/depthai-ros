@@ -8,6 +8,7 @@
 #include "depthai_ros_msgs/msg/spatial_detection_array.hpp"
 #include "rclcpp/time.hpp"
 #include "vision_msgs/msg/detection3_d_array.hpp"
+#include "depthai/device/Device.hpp"
 
 namespace dai {
 
@@ -18,7 +19,7 @@ using SpatialDetectionArrayPtr = SpatialMessages::SpatialDetectionArray::SharedP
 
 class SpatialDetectionConverter {
    public:
-    SpatialDetectionConverter(std::string frameName, int width, int height, bool normalized = false, bool getBaseDeviceTimestamp = false);
+    SpatialDetectionConverter(std::string frameName, int width, int height, std::shared_ptr<dai::Device> device, dai::CameraBoardSocket socket, bool normalized = false, bool getBaseDeviceTimestamp = false);
     ~SpatialDetectionConverter();
 
     /**
@@ -48,7 +49,10 @@ class SpatialDetectionConverter {
     const std::string _frameName;
     bool _normalized;
     std::chrono::time_point<std::chrono::steady_clock> _steadyBaseTime;
-
+    std::shared_ptr<dai::Device> _device;
+    dai::CameraBoardSocket _socket;
+    CalibrationHandler _ch;
+     
     rclcpp::Time _rosBaseTime;
     bool _getBaseDeviceTimestamp;
     // For handling ROS time shifts and debugging

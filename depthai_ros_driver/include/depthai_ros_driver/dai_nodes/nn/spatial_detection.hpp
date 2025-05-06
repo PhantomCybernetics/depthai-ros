@@ -48,7 +48,8 @@ class SpatialDetection : public BaseNode {
     };
     void setupQueues(std::shared_ptr<dai::Device> device) override {
         nnQ = device->getOutputQueue(nnQName, ph->getParam<int>("i_max_q_size"), false);
-        std::string socketName = getSocketName(static_cast<dai::CameraBoardSocket>(ph->getParam<int>("i_board_socket_id")));
+        auto socket = static_cast<dai::CameraBoardSocket>(ph->getParam<int>("i_board_socket_id"));
+        std::string socketName = getSocketName(socket);
         auto tfPrefix = getOpticalTFPrefix(socketName);
         int width;
         int height;
@@ -59,7 +60,7 @@ class SpatialDetection : public BaseNode {
             width = imageManip->initialConfig.getResizeConfig().width;
             height = imageManip->initialConfig.getResizeConfig().height;
         }
-        detConverter = std::make_unique<dai::ros::SpatialDetectionConverter>(tfPrefix, width, height, false, ph->getParam<bool>("i_get_base_device_timestamp"));
+        detConverter = std::make_unique<dai::ros::SpatialDetectionConverter>(tfPrefix, width, height, device, socket, false, ph->getParam<bool>("i_get_base_device_timestamp"));
         detConverter->setUpdateRosBaseTimeOnToRosMsg(ph->getParam<bool>("i_update_ros_base_time_on_ros_msg"));
         nnQ->addCallback(std::bind(&SpatialDetection::spatialCB, this, std::placeholders::_1, std::placeholders::_2));
         rclcpp::PublisherOptions options;
