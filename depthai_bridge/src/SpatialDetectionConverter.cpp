@@ -136,7 +136,6 @@ void SpatialDetectionConverter::toRosVisionMsg(std::shared_ptr<dai::SpatialImgDe
         auto fy = intrinsics[1][1];
         auto p_x = inNetData->detections[i].spatialCoordinates.x / 1000;
         auto p_y = -1.0 * inNetData->detections[i].spatialCoordinates.y / 1000;
-        // std::cout << "Yo! " << std::to_string(fx) << " x " << std::to_string(fy) << " > " << std::to_string(p_z) << std::endl;
 
         opDetectionMsg.detections[i].results[0].hypothesis.class_id = std::to_string(inNetData->detections[i].label);
         opDetectionMsg.detections[i].results[0].hypothesis.score = inNetData->detections[i].confidence;
@@ -148,12 +147,11 @@ void SpatialDetectionConverter::toRosVisionMsg(std::shared_ptr<dai::SpatialImgDe
         opDetectionMsg.detections[i].bbox.size.y = s_y;
         opDetectionMsg.detections[i].bbox.size.z = std::min(s_x, s_y) / 2.0;
 
-        // converting mm to meters since per ros rep-103 lenght should always be in meters
         opDetectionMsg.detections[i].results[0].pose.pose.position.x = p_x;
         opDetectionMsg.detections[i].results[0].pose.pose.position.y = p_y;
         opDetectionMsg.detections[i].results[0].pose.pose.position.z = p_z;
 
-        // 2. Choose world up (avoid colinearity)
+        // make BBs face the camera
         cv::Vec3d forward(-1.0 * p_x,
                           -1.0 * p_y,
                           -1.0 * p_z
@@ -164,21 +162,18 @@ void SpatialDetectionConverter::toRosVisionMsg(std::shared_ptr<dai::SpatialImgDe
         if (std::abs(forward.dot(worldUp)) > 0.999) // nearly parallel
             worldUp = cv::Vec3d(0, 0, 1);
 
-        // 3. Compute right and up vectors
         cv::Vec3d right = worldUp.cross(forward);
         right /= cv::norm(right);
         cv::Vec3d up = forward.cross(right);
         up /= cv::norm(up);
 
-        // 4. Build rotation matrix (columns: right, up, -forward)
         cv::Matx33d rot(
             right[0],   up[0],   forward[0],
             right[1],   up[1],   forward[1],
             right[2],   up[2],   forward[2]
         );
 
-        // 5. Convert rotation matrix to quaternion
-        auto q = cv::Quatd::createFromRotMat(rot); // OpenCV 4.7+
+        auto q = cv::Quatd::createFromRotMat(rot);
         opDetectionMsg.detections[i].results[0].pose.pose.orientation.x = q.x;
         opDetectionMsg.detections[i].results[0].pose.pose.orientation.y = q.y;
         opDetectionMsg.detections[i].results[0].pose.pose.orientation.z = q.z;
