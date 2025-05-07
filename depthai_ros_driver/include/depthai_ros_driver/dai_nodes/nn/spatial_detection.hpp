@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <vision_msgs/msg/detail/detection2_d_array__struct.hpp>
 
 #include "camera_info_manager/camera_info_manager.hpp"
 #include "depthai-shared/common/CameraBoardSocket.hpp"
@@ -14,6 +15,7 @@
 #include "depthai/pipeline/node/XLinkOut.hpp"
 #include "depthai_bridge/ImageConverter.hpp"
 #include "depthai_bridge/SpatialDetectionConverter.hpp"
+#include "depthai_bridge/ImgDetectionConverter.hpp"
 #include "depthai_ros_driver/dai_nodes/base_node.hpp"
 #include "depthai_ros_driver/dai_nodes/nn/nn_helpers.hpp"
 #include "depthai_ros_driver/dai_nodes/sensors/img_pub.hpp"
@@ -60,13 +62,23 @@ class SpatialDetection : public BaseNode {
             width = imageManip->initialConfig.getResizeConfig().width;
             height = imageManip->initialConfig.getResizeConfig().height;
         }
-        detConverter = std::make_unique<dai::ros::SpatialDetectionConverter>(tfPrefix, width, height, device, socket, false, ph->getParam<bool>("i_get_base_device_timestamp"));
-        detConverter->setUpdateRosBaseTimeOnToRosMsg(ph->getParam<bool>("i_update_ros_base_time_on_ros_msg"));
+        det3dConverter = std::make_unique<dai::ros::SpatialDetectionConverter>(tfPrefix, width, height, device, socket, false, ph->getParam<bool>("i_get_base_device_timestamp"));
+        det3dConverter->setUpdateRosBaseTimeOnToRosMsg(ph->getParam<bool>("i_update_ros_base_time_on_ros_msg"));
         nnQ->addCallback(std::bind(&SpatialDetection::spatialCB, this, std::placeholders::_1, std::placeholders::_2));
+
+        if(ph->getParam<bool>("i_enable_2d_detections")) {
+            det2dConverter = std::make_unique<dai::ros::ImgDetectionConverter>(tfPrefix, width, height, false, ph->getParam<bool>("i_get_base_device_timestamp"));
+            det2dConverter->setUpdateRosBaseTimeOnToRosMsg(ph->getParam<bool>("i_update_ros_base_time_on_ros_msg"));
+            nnQ->addCallback(std::bind(&SpatialDetection::detectionCB, this, std::placeholders::_1, std::placeholders::_2));
+        }
+
         rclcpp::PublisherOptions options;
         options.qos_overriding_options = rclcpp::QosOverridingOptions();
-        detPub = getROSNode()->template create_publisher<vision_msgs::msg::Detection3DArray>("~/" + getName() + "/spatial_detections", 10, options);
-
+        detPub3d = getROSNode()->template create_publisher<vision_msgs::msg::Detection3DArray>("~/" + getName() + "/spatial_detections", 10, options);
+        if(ph->getParam<bool>("i_enable_2d_detections")) {
+            detPub2d = getROSNode()->template create_publisher<vision_msgs::msg::Detection2DArray>("~/" + getName() + "/detections", 10, options);
+        }
+        
         if(ph->getParam<bool>("i_enable_passthrough")) {
             utils::ImgConverterConfig convConf;
             convConf.tfPrefix = tfPrefix;
@@ -148,16 +160,28 @@ class SpatialDetection : public BaseNode {
     void spatialCB(const std::string& /*name*/, const std::shared_ptr<dai::ADatatype>& data) {
         auto inDet = std::dynamic_pointer_cast<dai::SpatialImgDetections>(data);
         std::deque<vision_msgs::msg::Detection3DArray> deq;
-        detConverter->toRosVisionMsg(inDet, deq);
+        det3dConverter->toRosVisionMsg(inDet, deq);
         while(deq.size() > 0) {
             auto currMsg = deq.front();
-            detPub->publish(currMsg);
+            detPub3d->publish(currMsg);
             deq.pop_front();
         }
     };
-    std::unique_ptr<dai::ros::SpatialDetectionConverter> detConverter;
+    void detectionCB(const std::string& /*name*/, const std::shared_ptr<dai::ADatatype>& data) {
+        auto inDet = std::dynamic_pointer_cast<dai::SpatialImgDetections>(data);
+        std::deque<vision_msgs::msg::Detection2DArray> deq;
+        det2dConverter->toRosMsg(inDet, deq);
+        while(deq.size() > 0) {
+            auto currMsg = deq.front();
+            detPub2d->publish(currMsg);
+            deq.pop_front();
+        }
+    };
+    std::unique_ptr<dai::ros::SpatialDetectionConverter> det3dConverter;
+    std::unique_ptr<dai::ros::ImgDetectionConverter> det2dConverter;
     std::vector<std::string> labelNames;
-    rclcpp::Publisher<vision_msgs::msg::Detection3DArray>::SharedPtr detPub;
+    rclcpp::Publisher<vision_msgs::msg::Detection3DArray>::SharedPtr detPub3d;
+    rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr detPub2d;
     std::shared_ptr<dai::ros::ImageConverter> ptImageConverter, ptDepthImageConverter;
     std::shared_ptr<sensor_helpers::ImagePublisher> ptPub, ptDepthPub;
     std::shared_ptr<camera_info_manager::CameraInfoManager> ptInfoMan, ptDepthInfoMan;

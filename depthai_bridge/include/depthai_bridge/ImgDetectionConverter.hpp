@@ -6,6 +6,7 @@
 #include <vision_msgs/msg/detection2_d_array.hpp>
 
 #include "depthai/pipeline/datatype/ImgDetections.hpp"
+#include "depthai/pipeline/datatype/SpatialImgDetections.hpp"
 #include "rclcpp/time.hpp"
 
 namespace dai {
@@ -39,8 +40,10 @@ class ImgDetectionConverter {
     }
 
     void toRosMsg(std::shared_ptr<dai::ImgDetections> inNetData, std::deque<VisionMsgs::Detection2DArray>& opDetectionMsgs);
+    void toRosMsg(std::shared_ptr<dai::SpatialImgDetections> inNetData, std::deque<VisionMsgs::Detection2DArray>& opDetectionMsgs);
 
     Detection2DArrayPtr toRosMsgPtr(std::shared_ptr<dai::ImgDetections> inNetData);
+    Detection2DArrayPtr toRosMsgPtr(std::shared_ptr<dai::SpatialImgDetections> inNetData);
 
    private:
     int _width, _height;
