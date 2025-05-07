@@ -1,4 +1,7 @@
-# Depthai ROS Repository
-Hi and welcome to the main depthai-ros respository! Here you can find ROS related code for OAK cameras from Luxonis. Don't have one? You can get them [here!](https://shop.luxonis.com/)
+# Phntm Depthai ROS Repository
+This is a fork on the official [Luxonis ROS driver](https://github.com/luxonis/depthai-ros) and aims to address some of its shortcomings.
 
-You can find the newest documentation [here](https://docs.luxonis.com/software/ros/depthai-ros/)
+### Extra features:
+- The spatial node publihes vision_msgs::msg::Detection3DArray with proper 3D bouniging boxes
+- The y-coordinate in spatial detections is flipped upside down to properly match the camera's optical frame in the URDF
+- The spatial node can optionally output vision_msgs::msg::Detection2DArray alongside 3D detections (use nn.i_enable_2d_detections)
