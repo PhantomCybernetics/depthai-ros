@@ -297,7 +297,8 @@ FFMPEGMsgs::FFMPEGPacket ImageConverter::toRosFFMPEGPacket(std::shared_ptr<dai::
     outFrameMsg.width = camWidth;
     outFrameMsg.height = camHeight;
     outFrameMsg.encoding = ffmpegEncoding;
-    outFrameMsg.pts = header.stamp.sec * 1000000000 + header.stamp.nanosec;  // in nanoseconds
+    uint64 timestamp_ns = header.stamp.sec * 1000000000 + header.stamp.nanosec;
+    outFrameMsg.pts = (timestamp_ns * 90000) / 1000000000;  // in 1/90000
     outFrameMsg.flags = (int)(ft == RawEncodedFrame::FrameType::I);
     outFrameMsg.is_bigendian = false;
     outFrameMsg.data = inData->getData();
