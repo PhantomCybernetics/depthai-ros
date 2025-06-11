@@ -15,7 +15,7 @@ RUN mkdir -p $WS/src
 COPY ./ .$WS/src/depthai-ros
 RUN cd .$WS/ && rosdep install --from-paths src --ignore-src  -y
 
-RUN cd .$WS/ && . /opt/ros/${ROS_DISTRO}/setup.sh && ./src/depthai-ros/build.sh -s $BUILD_SEQUENTIAL -r 1 -m 1 
+RUN cd .$WS/ && . /opt/ros/${ROS_DISTRO}/setup.sh && ./src/depthai-ros/build.sh -s $BUILD_SEQUENTIAL -r 1 -m 0 
 RUN if [ "$USE_RVIZ" = "1" ] ; then echo "RVIZ ENABLED" && sudo apt install -y ros-${ROS_DISTRO}-rviz2 ros-${ROS_DISTRO}-rviz-imu-plugin ; else echo "RVIZ NOT ENABLED"; fi
 RUN echo "if [ -f ${WS}/install/setup.zsh ]; then source ${WS}/install/setup.zsh; fi" >> $HOME/.zshrc
 RUN echo 'eval "$(register-python-argcomplete3 ros2)"' >> $HOME/.zshrc
